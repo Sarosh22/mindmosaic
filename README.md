@@ -89,3 +89,6 @@ docs/EXPERIMENTS.md   experiment log and design decisions
 
 ## License
 [MIT](LICENSE)
+
+<img width="811" height="719" alt="image" src="https://github.com/user-attachments/assets/571c08e3-aed3-4c91-b08d-2cbcce351cc9" />
+
