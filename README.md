@@ -34,6 +34,7 @@ Guardrails around the model:
 - Quotes that don't appear in the entry are discarded, so the model can't invent evidence
 - Low temperature (0.2) for consistent output
 - The model is never asked to diagnose or give medical advice, and a disclaimer is always shown
+- The wording-cue check for Labeling, Overgeneralization and Should statements, and the rule that the alternative thought may only use facts from the entry.
 
 ## Open-source tools used
 - [Gemma](https://ai.google.dev/gemma) (Google's open-weight models), `gemma3:4b` by default
@@ -56,9 +57,10 @@ Guardrails around the model:
    python -m venv .venv
    source .venv/bin/activate        # Windows: .venv\Scripts\activate
    pip install -r requirements.txt
-   uvicorn app.main:app --host 127.0.0.1 --port 8000
+   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
    ```
-3. Open http://127.0.0.1:8000. The dot in the top corner turns green when the local model is ready.
+3. Open http://127.0.0.1:8000. The dot in the top corner turns green when the local model is ready. 
+“If you get a CUDA error, run Ollama on CPU: set CUDA_VISIBLE_DEVICES=-1 then ollama serve.”
 
 Change the model with an environment variable, e.g. `MINDMOSAIC_MODEL=gemma3:1b` (PowerShell: `$env:MINDMOSAIC_MODEL="gemma3:1b"`). Ollama is expected at `http://localhost:11434`; override with `OLLAMA_URL`.
 
@@ -85,7 +87,7 @@ docs/EXPERIMENTS.md   experiment log and design decisions
 - Small local models make mistakes. Suggestions are prompts for reflection, not conclusions.
 - Crisis detection is keyword-based and can miss indirect wording. It is a safety net, not a guarantee.
 - The database is a plain SQLite file in `data/`. Anyone with access to your computer account can read it (encryption is a planned improvement).
-- Tested with Gemma 3 models only.
+- Tested with gemma3:4b only”
 
 ## License
 [MIT](LICENSE)
