@@ -1,8 +1,6 @@
 # MindMosaic: a private CBT journal
 
-![MindMosaic finding a thinking trap](docs/screenshots/main_view.png)
-![Thinking trap result](docs/screenshots/main_view.png)
-*MindMosaic view and interface.*
+![MindMosaic finding a thinking trap](docs/screenshots/main_view.png)*MindMosaic view and interface.*
 
 ![Mood chart](docs/screenshots/pic_04.png)
 *Mood over time and most common thinking traps.*
