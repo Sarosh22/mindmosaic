@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MindMosaic</title>
+<style>
+  :root{--bg:#f6f3ee;--card:#fffdf9;--ink:#2b2a33;--mute:#6f6b78;--accent:#5b6cff;--accent2:#e9ebff;--warn:#fff3e0;--warnb:#f0b35a;--line:#e5e0d6;--danger:#b3261e}
+  @media (prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f29;--ink:#eceaf2;--mute:#a09cae;--accent:#8c97ff;--accent2:#2a2d52;--warn:#33291a;--warnb:#a87a2c;--line:#34313f;--danger:#ff8a80}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+  header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+  h1{margin:0;font-size:1.6rem} h1 span{color:var(--accent)}
+  .badge{font-size:.8rem;color:var(--mute)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#aaa;margin-right:6px}
+  .dot.ok{background:#2e9e5b}.dot.bad{background:var(--danger)}
+  .banner{background:var(--warn);border:1px solid var(--warnb);border-radius:12px;padding:10px 14px;font-size:.85rem;margin:14px 0}
+  .privacy{color:var(--mute);font-size:.85rem;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  textarea{width:100%;min-height:140px;border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit;background:var(--bg);color:var(--ink);resize:vertical}
+  button{font:inherit;border:0;border-radius:10px;padding:10px 16px;background:var(--accent);color:#fff;cursor:pointer}
+  button.ghost{background:transparent;color:var(--mute);border:1px solid var(--line);padding:6px 10px;font-size:.8rem}
+  button:disabled{opacity:.55;cursor:wait}
+  .row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap}
+  .chip{display:inline-block;background:var(--accent2);border-radius:999px;padding:2px 10px;font-size:.8rem;margin-right:6px}
+  .distortion{border-left:4px solid var(--accent);padding:6px 12px;margin:12px 0;background:var(--accent2);border-radius:0 10px 10px 0}
+  .distortion h4{margin:0}.distortion .q{font-style:italic;color:var(--mute);margin:2px 0}
+  .distortion ul{margin:6px 0 0 18px;padding:0}
+  .alt{border:1px dashed var(--accent);border-radius:10px;padding:10px 12px;margin-top:10px}
+  .crisis{border:2px solid var(--danger);border-radius:12px;padding:14px;margin-top:10px}
+  h2{font-size:1.1rem;margin:0 0 10px}
+  .bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.9rem}
+  .bar i{display:block;height:10px;border-radius:5px;background:var(--accent)}
+  .entry{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+  .entry:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  .date{color:var(--mute);font-size:.8rem}
+  .txt{white-space:pre-wrap;margin:4px 0}
+  .muted{color:var(--mute)}
+  svg text{fill:var(--mute);font-size:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mind<span>Mosaic</span></h1>
+    <div class="badge"><span id="dot" class="dot"></span><span id="status">checking local AI...</span></div>
+  </header>
+  <p class="privacy">Your entries stay on this computer. The AI runs locally through Ollama; nothing is sent to the internet.</p>
+  <div id="disc" class="banner"></div>
+
+  <div class="card">
+    <h2>How are you feeling? Write it out.</h2>
+    <textarea id="text" placeholder="Write whatever is on your mind..."></textarea>
+    <div class="row">
+      <span class="muted" id="hint">Reflection can take 10-40 seconds on a laptop.</span>
+      <button id="save">Save &amp; reflect</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>Your patterns</h2>
+    <div id="insights" class="muted">Write a few entries to see trends.</div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-top:0">
+      <h2 style="margin:0">Past entries</h2>
+      <span>
+        <button class="ghost" id="export">Export JSON</button>
+        <button class="ghost" id="wipe">Delete everything</button>
+      </span>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function health(){
+  try{
+    const h = await (await fetch('/api/health')).json();
+    $('disc').textContent = h.disclaimer;
+    const ok = h.ollama && h.model_ready;
+    $('dot').className = 'dot ' + (ok ? 'ok' : 'bad');
+    $('status').textContent = !h.ollama ? 'Ollama not running' : (!h.model_ready ? `model missing: ollama pull ${h.model}` : `local AI ready (${h.model})`);
+  }catch{ $('status').textContent = 'server unreachable'; }
+}
+
+function renderAnalysis(a){
+  if(!a) return '';
+  let h = '';
+  if(a.emotions.length) h += a.emotions.map(e=>`<span class="chip">${esc(e)}</span>`).join('');
+  if(a.mood!=null) h += `<span class="chip">mood ${a.mood}/10</span>`;
+  h += a.distortions.map(d=>`
+    <div class="distortion">
+      <h4>${esc(d.name)}</h4>
+      <div class="muted">${esc(d.meaning)}</div>
+      <div class="q">"${esc(d.quote)}"</div>
+      <div>Questions to try:</div>
+      <ul>${d.questions.map(q=>`<li>${esc(q)}</li>`).join('')}</ul>
+    </div>`).join('');
+  if(a.alternative) h += `<div class="alt"><strong>Another way to look at it</strong><br>${esc(a.alternative)}</div>`;
+  if(!a.distortions.length) h += `<p class="muted">No clear thinking traps spotted this time.</p>`;
+  return h;
+}
+
+$('save').onclick = async () => {
+  const text = $('text').value.trim();
+  if(!text) return;
+  $('save').disabled = true; $('save').textContent = 'Reflecting...';
+  $('result').innerHTML = '';
+  try{
+    const r = await fetch('/api/entries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(!r.ok) throw new Error('Request failed');
+    const d = await r.json();
+    if(d.status==='crisis') $('result').innerHTML = `<div class="crisis">${esc(d.message)}</div>`;
+    else if(d.status==='no_model') $('result').innerHTML = `<p class="muted">${esc(d.message)}</p>`;
+    else $('result').innerHTML = renderAnalysis(d.entry.analysis);
+    $('text').value = '';
+    loadAll();
+  }catch(e){ $('result').innerHTML = `<p style="color:var(--danger)">Something went wrong: ${esc(e.message)}</p>`; }
+  $('save').disabled = false; $('save').textContent = 'Save & reflect';
+};
+
+function moodChart(points){
+  if(points.length<2) return '<p class="muted">Add at least two entries to see your mood trend.</p>';
+  const W=640,H=140,p=24, n=points.length;
+  const x=i=>p+i*(W-2*p)/(n-1), y=m=>H-p-(m-1)*(H-2*p)/9;
+  const path = points.map((q,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(q.mood).toFixed(1)}`).join(' ');
+  const dots = points.map((q,i)=>`<circle cx="${x(i)}" cy="${y(q.mood)}" r="3.5" fill="var(--accent)"><title>${esc(q.date)}: ${q.mood}/10</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Mood over time">
+    <line x1="${p}" y1="${y(1)}" x2="${W-p}" y2="${y(1)}" stroke="var(--line)"/><line x1="${p}" y1="${y(10)}" x2="${W-p}" y2="${y(10)}" stroke="var(--line)"/>
+    <text x="2" y="${y(10)+3}">10</text><text x="6" y="${y(1)+3}">1</text>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2"/>${dots}</svg>`;
+}
+function bars(items){
+  if(!items.length) return '<p class="muted">None yet.</p>';
+  const max = Math.max(...items.map(i=>i.count));
+  return items.map(i=>`<div class="bar"><span style="width:170px">${esc(i.name)}</span><i style="width:${Math.max(8,i.count/max*220)}px"></i><span class="muted">${i.count}</span></div>`).join('');
+}
+
+async function loadAll(){
+  const [ins, list] = await Promise.all([fetch('/api/insights').then(r=>r.json()), fetch('/api/entries').then(r=>r.json())]);
+  $('insights').innerHTML = `<strong>Mood over time</strong>${moodChart(ins.mood_trend)}
+    <strong>Most common thinking traps</strong>${bars(ins.distortion_counts)}
+    <strong>Most common emotions</strong>${bars(ins.emotion_counts)}`;
+  $('list').innerHTML = list.length ? list.map(e=>`
+    <div class="entry">
+      <div class="date">${new Date(e.created_at).toLocaleString()} <button class="ghost" data-del="${e.id}">delete</button></div>
+      <div class="txt">${esc(e.text)}</div>
+      ${e.crisis?'<span class="chip">supportive message shown</span>':renderAnalysis(e.analysis)}
+    </div>`).join('') : '<p class="muted">No entries yet.</p>';
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{ await fetch('/api/entries/'+b.dataset.del,{method:'DELETE'}); loadAll(); });
+}
+
+$('export').onclick = () => location.href = '/api/export';
+$('wipe').onclick = async () => { if(confirm('Delete ALL entries permanently?')){ await fetch('/api/entries',{method:'DELETE'}); loadAll(); } };
+
+health(); loadAll();
+</script>
+</body>
+</html>
