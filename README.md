@@ -1,5 +1,12 @@
 # MindMosaic: a private CBT journal
 
+![MindMosaic finding a thinking trap](docs/screenshots/main_view.png)
+![Thinking trap result](docs/screenshots/main_view.png)
+*MindMosaic view and interface.*
+
+![Mood chart](docs/screenshots/pic_04.png)
+*Mood over time and most common thinking traps.*
+
 > **Your private thoughts never leave your device.**
 > A local-first journaling app that notices unhelpful thinking patterns and gently offers CBT-style alternative perspectives, using an open-weight Gemma model running on your own computer.
 
@@ -92,5 +99,5 @@ docs/EXPERIMENTS.md   experiment log and design decisions
 ## License
 [MIT](LICENSE)
 
-<img width="811" height="719" alt="image" src="https://github.com/user-attachments/assets/571c08e3-aed3-4c91-b08d-2cbcce351cc9" />
+
 
